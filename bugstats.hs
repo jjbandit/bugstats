@@ -1,13 +1,10 @@
 import Data.Char as Char
 
 main = do
-  fileContents <- catFile "./bugs"
-  let bugTokens = tokenizeStream fileContents
-  print bugTokens
-
-
-catFile :: String -> IO String
-catFile = readFile
+  fileContents <- readFile "bug.stats"
+  let tokens = tokenizeStream fileContents
+  let bugs = lexTokens tokens []
+  print bugs
 
 
 tokenizeStream :: [Char] -> [Token]
@@ -18,53 +15,42 @@ tokenizeStream (char : charStream) = tokenizeChar char : tokenizeStream charStre
 tokenizeChar :: Char -> Token
 tokenizeChar c
   | c == '#' = Hash
+  | c == '@' = At
   | c == ':' = Colon
-  | c == '-' = Delim
+  | c == '-' = Dash
   | c == ' ' = Whitespace
+  | c == '\t' = Whitespace
   | c == '\n' = Newline
   | isDigit c = Digit c
   | isAlpha c = Alpha c
   | otherwise = Undefined c
 
 
-
--- accumulate :: String -> (String, String)
--- accumulate (s, ss) = (s, ss)
-
--- mkBug :: String -> Bug
--- mkBug s = words s
-
--- mkTag :: (String, Bug) -> Bug
+lexTokens :: [Token] -> [Bug] -> [Bug]
+lexTokens (token : tokenList) bugs
+  | token == At = mkBug tokenList : bugs
+  | otherwise = lexTokens tokenList bugs
 
 
+mkBug :: [Token] -> Bug
+mkBug _ = Bug "" ""
 
 
 data Token = Hash
+           | At
+           | Colon
+           | Dash
            | Newline
            | Whitespace
-           | Colon
-           | Delim
            | Digit Char
            | Alpha Char
            | Undefined Char
-  deriving (Show)
-
-
-data BugHeader =
-  BugHeader { date   :: String,
-              hours  :: String,
-              status :: String,
-              title  :: String }
-  deriving (Show)
+  deriving (Show, Eq)
 
 
 data Bug =
-  Bug { header :: BugHeader,
-        desc   :: String,
-        tags   :: [String] }
+  Bug { header :: String,
+        description :: String }
   deriving (Show)
-
-
-
 
 
