@@ -2,31 +2,29 @@ import Data.Char as Char
 
 main = do
   fileContents <- catFile "./bugs"
-  let bugs = parseLinesInFile (lines fileContents)
-  print bugs
+  let bugTokens = tokenizeStream fileContents
+  print bugTokens
 
 
 catFile :: String -> IO String
 catFile = readFile
 
 
-parseLinesInFile :: [String] -> [Token]
-parseLinesInFile [] = [Undefined]
-parseLinesInFile (line : lines) = tokenizeLine line
+tokenizeStream :: [Char] -> [Token]
+tokenizeStream [] = []
+tokenizeStream (char : charStream) = tokenizeChar char : tokenizeStream charStream
 
-tokenizeLine :: [Char] -> [Token]
-tokenizeLine [] = []
-tokenizeLine (char : charStream) = tokenizeChar char : tokenizeLine charStream
 
 tokenizeChar :: Char -> Token
 tokenizeChar c
   | c == '#' = Hash
   | c == ':' = Colon
   | c == '-' = Delim
-  | c == ' ' = White
-  | isDigit c = Digit
-  | isAlpha c = Alpha
-  | otherwise = Undefined
+  | c == ' ' = Whitespace
+  | c == '\n' = Newline
+  | isDigit c = Digit c
+  | isAlpha c = Alpha c
+  | otherwise = Undefined c
 
 
 
@@ -41,7 +39,14 @@ tokenizeChar c
 
 
 
-data Token = Hash | White | Colon | Delim | Digit | Alpha | Undefined
+data Token = Hash
+           | Newline
+           | Whitespace
+           | Colon
+           | Delim
+           | Digit Char
+           | Alpha Char
+           | Undefined Char
   deriving (Show)
 
 
