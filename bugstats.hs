@@ -1,10 +1,11 @@
 import Data.Char as Char
 
 main = do
-  fileContents <- readFile "bug.stats"
+  fileContents <- readFile "bugs.md"
   let tokens = tokenizeStream fileContents
   let bugs = lexTokens tokens []
   print bugs
+
 
 
 tokenizeStream :: [Char] -> [Token]
@@ -27,8 +28,9 @@ tokenizeChar c
 
 
 lexTokens :: [Token] -> [Bug] -> [Bug]
+lexTokens [] _ = []
 lexTokens (token : tokenList) bugs
-  | token == At = mkBug tokenList : bugs
+  | token == Hash = mkBug tokenList : bugs ++ lexTokens tokenList bugs
   | otherwise = lexTokens tokenList bugs
 
 
