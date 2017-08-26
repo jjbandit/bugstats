@@ -31,13 +31,18 @@ mkBugsFromTokens all@(token : tokenList) bugList
 
 mkBug :: [Token] -> Bug
 mkBug (token : list)
-  | token == Token_StartBugHeader = mkBugHeader list
+  | token == Token_StartBugHeader = mkBugDate list
 
 
-mkBugHeader :: [Token] -> Bug
-mkBugHeader (Token_Identifier m:Token_Identifier d:Token_Identifier y:Token_Dash:Token_Identifier time:Token_Dash:Token_Identifier status: list) =
-  Bug (m ++ " " ++ d ++ " "++ y) time status
-mkBugHeader _ = error "Invalid Header"
+mkBugDate :: [Token] -> Bug
+mkBugDate (Token_Identifier m:Token_Identifier d:Token_Identifier y :Token_Dash: list) =
+  mkBugTimeSpent (list, Bug (m ++ " " ++ d ++ " "++ y) "" "")
+mkBugDate _ = error "Invalid Header : Date"
+
+mkBugTimeSpent :: ([Token], Bug) -> Bug
+mkBugTimeSpent ( (Token_Identifier time : Token_Dash : list), Bug date _ _) = Bug date time ""
+mkBugTimeSpent _ = error "Invalid Header : Time"
+
 
 mkBugDescription :: ([Token], Bug) -> Bug
 mkBugDescription ((token : list), bug) = bug
