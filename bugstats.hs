@@ -20,6 +20,8 @@ tokStr str@(c : tail)
   | c == ' ' = Token_Whitespace
   | c == '\t' = Token_Whitespace
   | c == '\n' = Token_Newline
+  | str == "closed" = Token_Status Status_Closed
+  | str == "open" = Token_Status Status_Closed
   | otherwise = Token_Identifier str
 
 
@@ -36,18 +38,22 @@ mkBug (token : list)
 
 mkBugDate :: [Token] -> Bug
 mkBugDate (Token_Identifier m:Token_Identifier d:Token_Identifier y :Token_Dash: list) =
-  mkBugTimeSpent (list, Bug (m ++ " " ++ d ++ " "++ y) "" "")
+  mkBugTimeSpent (list, Bug (m ++ " " ++ d ++ " "++ y) "" Status_Undefined)
 mkBugDate _ = error "Invalid Header : Date"
 
 mkBugTimeSpent :: ([Token], Bug) -> Bug
-mkBugTimeSpent ( (Token_Identifier time : Token_Dash : list), Bug date _ _) = Bug date time ""
+mkBugTimeSpent ( (Token_Identifier time : Token_Dash : list), Bug date _ status) = mkBugStatus (list, Bug date time status)
 mkBugTimeSpent _ = error "Invalid Header : Time"
 
+mkBugStatus :: ([Token], Bug) -> Bug
+mkBugStatus ( (Token_Status status: Token_Dash: list), Bug date time _ ) = Bug date time status
+mkBugStatus ( (Token_Identifier s:list), bug ) = error s
+mkBugStatus _ = error "Invalid Header : Status"
 
 mkBugDescription :: ([Token], Bug) -> Bug
 mkBugDescription ((token : list), bug) = bug
 
-
+data BugStatus = Status_Undefined | Status_Open | Status_Closed deriving (Show, Eq)
 
 data Token = Token_StartBugHeader
            | Token_StartBugTag
@@ -55,12 +61,13 @@ data Token = Token_StartBugHeader
            | Token_Newline
            | Token_Whitespace
            | Token_Identifier String
+           | Token_Status BugStatus
   deriving (Show, Eq)
 
 
 data Bug = Bug { date      :: String,
                  timeSpent :: String,
-                 status    :: String }
+                 status    :: BugStatus }
  deriving (Show)
 
 
