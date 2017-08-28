@@ -1,5 +1,8 @@
 import Data.Char as Char
 
+import Data.Time
+import Data.Time.Format
+
 main = do
   fileContents <- readFile "bugs.md"
   let tokens = tokenizeWords (words fileContents)
@@ -7,9 +10,12 @@ main = do
   printBugs bugs
 
 printBugs :: [Bug] -> IO ()
-printBugs [] = print "Done"
-printBugs (bug : bugs) = do
-  print bug
+printBugs [] = return ()
+printBugs (Bug date time status title : bugs) = do
+  print (replicate 80 '-')
+  print (concat [title, time])
+  print $ formatTime defaultTimeLocale "%b %d '%y" date
+  print status
   printBugs bugs
 
 tokenizeWords :: [String] -> [Token]
@@ -45,8 +51,9 @@ mkBug (token : list)
 
 
 popDateTokens :: [Token] -> Bug
-popDateTokens (Token_Identifier m:Token_Identifier d:Token_Identifier y :Token_Dash: list) =
-  popTimeTokens (list, Bug (m ++ " " ++ d ++ " "++ y) "" Status_Undefined "" )
+popDateTokens (Token_Identifier m:Token_Identifier d:Token_Identifier y :Token_Dash: list) = do
+  let date = parseTimeOrError True defaultTimeLocale "%b%d%Y" $ concat [m,d,y] :: UTCTime
+  popTimeTokens (list, Bug date "" Status_Undefined "" )
 popDateTokens _ = error "Invalid Header : Date"
 
 popTimeTokens :: ([Token], Bug) -> Bug
@@ -76,7 +83,7 @@ data Token = Token_StartBugHeader
   deriving (Show, Eq)
 
 
-data Bug = Bug { date      :: String,
+data Bug = Bug { date      :: UTCTime,
                  timeSpent :: String,
                  status    :: BugStatus,
                  title     :: String }
