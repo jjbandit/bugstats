@@ -4,8 +4,13 @@ main = do
   fileContents <- readFile "bugs.md"
   let tokens = tokenizeWords (words fileContents)
   let bugs = mkBugsFromTokens tokens []
-  print bugs
+  printBugs bugs
 
+printBugs :: [Bug] -> IO ()
+printBugs [] = print "Done"
+printBugs (bug : bugs) = do
+  print bug
+  printBugs bugs
 
 tokenizeWords :: [String] -> [Token]
 tokenizeWords [] = []
@@ -31,7 +36,6 @@ mkBugsFromTokens tokens@(token : remainingTokens) bugs
   | token == Token_StartBugHeader = do
      let tempBugs = mkBug tokens : bugs
      mkBugsFromTokens remainingTokens tempBugs
-
   | otherwise = mkBugsFromTokens remainingTokens bugs
 
 
@@ -42,19 +46,23 @@ mkBug (token : list)
 
 popDateTokens :: [Token] -> Bug
 popDateTokens (Token_Identifier m:Token_Identifier d:Token_Identifier y :Token_Dash: list) =
-  popTimeTokens (list, Bug (m ++ " " ++ d ++ " "++ y) "" Status_Undefined)
+  popTimeTokens (list, Bug (m ++ " " ++ d ++ " "++ y) "" Status_Undefined "" )
 popDateTokens _ = error "Invalid Header : Date"
 
 popTimeTokens :: ([Token], Bug) -> Bug
-popTimeTokens ( (Token_Identifier time : Token_Dash : list), Bug date _ status) = popStatusTokens (list, Bug date time status)
+popTimeTokens ( (Token_Identifier time : Token_Dash : list), Bug date _ status title ) =
+  popStatusTokens (list, Bug date time status title)
 popTimeTokens _ = error "Invalid Header : Time"
 
 popStatusTokens :: ([Token], Bug) -> Bug
-popStatusTokens ( (Token_Status status: Token_Dash: list), Bug date time _ ) = Bug date time status
+popStatusTokens ( (Token_Status status: Token_Dash: list), Bug date time _ title ) =
+  mkBugTitle (list, Bug date time status title)
 popStatusTokens _ = error "Invalid Header : Status"
 
-mkBugDescription :: ([Token], Bug) -> Bug
-mkBugDescription ((token : list), bug) = bug
+mkBugTitle :: ([Token], Bug) -> Bug
+mkBugTitle ((Token_Identifier word : list), Bug d t s title ) =
+  mkBugTitle (list, Bug d t s (title ++ word ++ " "))
+mkBugTitle (_, bug) = bug
 
 data BugStatus = Status_Undefined | Status_Open | Status_Closed deriving (Show, Eq)
 
@@ -70,7 +78,8 @@ data Token = Token_StartBugHeader
 
 data Bug = Bug { date      :: String,
                  timeSpent :: String,
-                 status    :: BugStatus }
+                 status    :: BugStatus,
+                 title     :: String }
  deriving (Show)
 
 
