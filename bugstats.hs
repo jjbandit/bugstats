@@ -2,18 +2,18 @@ import Data.Char as Char
 
 main = do
   fileContents <- readFile "bugs.md"
-  let tokens = tokStream (words fileContents)
+  let tokens = tokenizeWords (words fileContents)
   let bugs = mkBugsFromTokens tokens []
   print bugs
 
 
-tokStream :: [String] -> [Token]
-tokStream [] = []
-tokStream (char : charStream) = tokStr char : tokStream charStream
+tokenizeWords :: [String] -> [Token]
+tokenizeWords [] = []
+tokenizeWords (char : charStream) = tokenizeString char : tokenizeWords charStream
 
 
-tokStr :: String -> Token
-tokStr str@(c : tail)
+tokenizeString :: String -> Token
+tokenizeString str@(c : tail)
   | c == '#' = Token_StartBugHeader
   | c == '*' = Token_StartBugTag
   | c == '-' = Token_Dash
@@ -26,29 +26,32 @@ tokStr str@(c : tail)
 
 
 mkBugsFromTokens :: [Token] -> [Bug] -> [Bug]
-mkBugsFromTokens [] _ = []
-mkBugsFromTokens all@(token : tokenList) bugList
-  | token == Token_StartBugHeader = mkBug all : bugList
+mkBugsFromTokens [] bugs = bugs
+mkBugsFromTokens tokens@(token : remainingTokens) bugs
+  | token == Token_StartBugHeader = do
+     let tempBugs = mkBug tokens : bugs
+     mkBugsFromTokens remainingTokens tempBugs
+
+  | otherwise = mkBugsFromTokens remainingTokens bugs
 
 
 mkBug :: [Token] -> Bug
 mkBug (token : list)
-  | token == Token_StartBugHeader = mkBugDate list
+  | token == Token_StartBugHeader = popDateTokens list
 
 
-mkBugDate :: [Token] -> Bug
-mkBugDate (Token_Identifier m:Token_Identifier d:Token_Identifier y :Token_Dash: list) =
-  mkBugTimeSpent (list, Bug (m ++ " " ++ d ++ " "++ y) "" Status_Undefined)
-mkBugDate _ = error "Invalid Header : Date"
+popDateTokens :: [Token] -> Bug
+popDateTokens (Token_Identifier m:Token_Identifier d:Token_Identifier y :Token_Dash: list) =
+  popTimeTokens (list, Bug (m ++ " " ++ d ++ " "++ y) "" Status_Undefined)
+popDateTokens _ = error "Invalid Header : Date"
 
-mkBugTimeSpent :: ([Token], Bug) -> Bug
-mkBugTimeSpent ( (Token_Identifier time : Token_Dash : list), Bug date _ status) = mkBugStatus (list, Bug date time status)
-mkBugTimeSpent _ = error "Invalid Header : Time"
+popTimeTokens :: ([Token], Bug) -> Bug
+popTimeTokens ( (Token_Identifier time : Token_Dash : list), Bug date _ status) = popStatusTokens (list, Bug date time status)
+popTimeTokens _ = error "Invalid Header : Time"
 
-mkBugStatus :: ([Token], Bug) -> Bug
-mkBugStatus ( (Token_Status status: Token_Dash: list), Bug date time _ ) = Bug date time status
-mkBugStatus ( (Token_Identifier s:list), bug ) = error s
-mkBugStatus _ = error "Invalid Header : Status"
+popStatusTokens :: ([Token], Bug) -> Bug
+popStatusTokens ( (Token_Status status: Token_Dash: list), Bug date time _ ) = Bug date time status
+popStatusTokens _ = error "Invalid Header : Status"
 
 mkBugDescription :: ([Token], Bug) -> Bug
 mkBugDescription ((token : list), bug) = bug
